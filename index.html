@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PALS PICK - Retro Arcade Lottery</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- Supabase CDN estable -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -68,7 +69,7 @@
 
     <form id="login-form" class="auth-form active">
       <h2>Ingresa</h2>
-      <input type="email" id="login-email" placeholder="Email" required>
+      <input type="email" id="login-email" placeholder="Email" required autocomplete="email">
       <input type="password" id="login-pass" placeholder="Contraseña" required minlength="8">
       <div class="form-options">
         <label><input type="checkbox" id="remember-me"> Recordarme</label>
@@ -80,7 +81,7 @@
 
     <form id="register-form" class="auth-form">
       <h2>Regístrate</h2>
-      <input type="email" id="reg-email" placeholder="Email" required>
+      <input type="email" id="reg-email" placeholder="Email" required autocomplete="email">
       <input type="password" id="reg-pass" placeholder="Contraseña" required minlength="8">
       <input type="password" id="reg-confirm" placeholder="Confirma contraseña" required minlength="8">
       <label class="terms-label">
@@ -175,9 +176,10 @@
     </div>
   </div>
 
-  <footer>Solo entretenimiento • PALS sin valor real • v0.5 con Supabase DB</footer>
+  <footer>Solo entretenimiento • PALS sin valor real • v0.6 con Supabase</footer>
 
   <script>
+    // Supabase config con tu clave real
     const SUPABASE_URL = 'https://gebzxplysiahztifncpd.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlYnh6cGx5c2lhaHp0aWZuY3BkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI2ODg4NDksImV4cCI6MjA4ODI2NDg0OX0.jMfgeFkFaKbOyI2e421CUpIaVNNf9nzbbL6nBCOKm1w';
 
@@ -329,17 +331,16 @@
     setInterval(simulateResult, 8000);
     simulateResult();
 
-    // Tabs - versión robusta con DOMContentLoaded
+    // Tabs - versión ultra segura
     document.addEventListener('DOMContentLoaded', () => {
-      const tabButtons = document.querySelectorAll('.tab-btn');
-      tabButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-          tabButtons.forEach(b => b.classList.remove('active'));
-          btn.classList.add('active');
-          document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-          const tab = btn.dataset.tab;
-          const form = document.getElementById(tab + '-form');
-          if (form) form.classList.add('active');
+      const tabs = document.querySelectorAll('.tab-btn');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+          tabs.forEach(t => t.classList.remove('active'));
+          this.classList.add('active');
+          document.querySelectorAll('.auth-form').forEach(form => form.classList.remove('active'));
+          const targetForm = document.getElementById(this.dataset.tab + '-form');
+          if (targetForm) targetForm.classList.add('active');
         });
       });
     });
