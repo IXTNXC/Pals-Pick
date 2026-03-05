@@ -6,7 +6,205 @@
   <title>PALS PICK - Retro Arcade Lottery</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <!-- Supabase JS CDN (versión 2 latest estable) -->
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script>
+  // SUPABASE - usa tu URL y clave legacy real
+  const SUPABASE_URL = 'https://gebzxplysiahztifncpd.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdlYnp4cGx5c2lhaHp0aWZucHBkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzA5NzY4MDAsImV4cCI6MjA0NjUzMjgwMH0.jmfgeFkKabk0yI2ea421UpIaVNNF9nzbbl6nBCOKm1w';
+
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  // Estado
+  let currentUser = null;
+  let balance = 200;
+  let passiveIncome = 16;
+  let selectedNumbers = new Set();
+  let history = [];
+  const MAX_NUMBERS = 40;
+
+  // DOM
+  const authScreen = document.getElementById('auth-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const balanceEl = document.getElementById('balance');
+  const passiveEl = document.getElementById('passive');
+  const countEl = document.getElementById('count-selected');
+  const costEl = document.getElementById('cost');
+  const btnConfirm = document.getElementById('btn-confirm');
+  const btnClear = document.getElementById('btn-clear');
+  const grid = document.getElementById('number-grid');
+  const lastResultEl = document.getElementById('last-result');
+  const lastTailEl = document.getElementById('last-tail');
+  const hitsEl = document.getElementById('hits');
+  const historyList = document.getElementById('history-list');
+
+  // Cargar perfil
+  async function loadUserProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      currentUser = user;
+      const { data, error } = await supabase.from('profiles').select('balance, passive_income').eq('id', user.id).single();
+      if (data) {
+        balance = data.balance || 200;
+        passiveIncome = data.passive_income || 16;
+      } else {
+        await supabase.from('profiles').insert({
+          id: user.id,
+          email: user.email,
+          balance: 200,
+          passive_income: 16,
+          nfts: { common: 2, rare: 1 }
+        });
+      }
+      updateBalance();
+      showGame();
+    } else {
+      showAuth();
+    }
+  }
+
+  function showGame() {
+    authScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    updateBalance();
+    updateSelectionInfo();
+    renderHistory();
+    if (localStorage.getItem('legalAccepted') !== 'true') {
+      document.getElementById('legal-modal').classList.add('active');
+    }
+  }
+
+  function showAuth() {
+    authScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+  }
+
+  function updateBalance() {
+    balanceEl.textContent = balance;
+    passiveEl.textContent = `+${passiveIncome}`;
+  }
+
+  function updateSelectionInfo() {
+    const cnt = selectedNumbers.size;
+    countEl.textContent = cnt;
+    costEl.textContent = cnt;
+    btnConfirm.disabled = cnt === 0 || cnt > balance;
+  }
+
+  // Grid
+  for (let i = 0; i <= 99; i++) {
+    const num = i.toString().padStart(2, '0');
+    const btn = document.createElement('button');
+    btn.className = 'number-btn';
+    btn.textContent = num;
+    btn.dataset.value = num;
+    btn.addEventListener('click', () => {
+      if (selectedNumbers.has(num)) {
+        selectedNumbers.delete(num);
+        btn.classList.remove('selected');
+      } else {
+        if (selectedNumbers.size >= MAX_NUMBERS) return;
+        selectedNumbers.add(num);
+        btn.classList.add('selected');
+      }
+      updateSelectionInfo();
+    });
+    grid.appendChild(btn);
+  }
+
+  btnClear.addEventListener('click', () => {
+    selectedNumbers.clear();
+    document.querySelectorAll('.number-btn').forEach(b => b.classList.remove('selected'));
+    updateSelectionInfo();
+  });
+
+  btnConfirm.addEventListener('click', async () => {
+    if (selectedNumbers.size > balance) return alert("No tienes suficientes PALS");
+    balance -= selectedNumbers.size;
+    updateBalance();
+
+    const apuesta = {
+      date: new Date().toLocaleString(),
+      numbers: [...selectedNumbers].sort(),
+      cost: selectedNumbers.size
+    };
+    history.unshift(apuesta);
+    renderHistory();
+
+    selectedNumbers.clear();
+    document.querySelectorAll('.number-btn').forEach(b => b.classList.remove('selected'));
+    updateSelectionInfo();
+
+    alert(`Apuesta registrada (${apuesta.cost} PALS)`);
+  });
+
+  function renderHistory() {
+    if (history.length === 0) {
+      historyList.innerHTML = "Aún sin jugadas...";
+      return;
+    }
+    historyList.innerHTML = history.slice(0,5).map(h => `
+      <div>
+        <strong>${h.date}</strong><br>
+        Números: ${h.numbers.join(' - ')}<br>
+        Costo: ${h.cost} PALS
+      </div>
+    `).join('');
+  }
+
+  // Simulación
+  function simulateResult() {
+    const full = String(Math.floor(Math.random()*1000)).padStart(3,'0');
+    const tail = full.slice(-2);
+    lastResultEl.textContent = full;
+    lastTailEl.textContent = tail;
+    if (history.length > 0) {
+      const hits = history[0].numbers.filter(n => n === tail).length;
+      hitsEl.textContent = hits;
+    }
+  }
+  setInterval(simulateResult, 8000);
+  simulateResult();
+
+  // Tabs - ARREGLADO
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
+        const tab = btn.getAttribute('data-tab');
+        document.getElementById(tab + '-form').classList.add('active');
+      });
+    });
+  });
+
+  // Logout
+  document.getElementById('btn-logout')?.addEventListener('click', async () => {
+    await supabase.auth.signOut();
+    currentUser = null;
+    showAuth();
+  });
+
+  // Modales
+  document.getElementById('show-terms')?.addEventListener('click', e => {
+    e.preventDefault();
+    document.getElementById('terms-modal').classList.add('active');
+  });
+  document.getElementById('close-terms')?.addEventListener('click', () => document.getElementById('terms-modal').classList.remove('active'));
+
+  document.getElementById('accept-legal')?.addEventListener('click', () => {
+    localStorage.setItem('legalAccepted', 'true');
+    document.getElementById('legal-modal').classList.remove('active');
+  });
+
+  // Auth listener
+  supabase.auth.onAuthStateChange((event, session) => {
+    if (session) loadUserProfile();
+    else showAuth();
+  });
+
+  // Inicial
+  loadUserProfile();
+</script>
 
   <style>
     * { margin:0; padding:0; box-sizing:border-box; }
